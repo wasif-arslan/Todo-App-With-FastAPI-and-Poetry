@@ -1,10 +1,9 @@
-from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, HTTPException
 from sqlmodel import Field, Session, SQLModel, create_engine, select
 from typing import Annotated, Optional
-import os
+from todoapp import setting
 
-load_dotenv()
+app: FastAPI = FastAPI()
 
 class Todo(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -20,18 +19,11 @@ class TodoResponse(SQLModel):
     name: str
     description: str
 
-DATABASE_URL = os.getenv("DATABASE_URL")
-engine = create_engine(DATABASE_URL)
 
-def create_db_and_tables():
-    SQLModel.metadata.create_all(engine)
+connection_string:str = str(setting.DATABASE_URL).replace("postgresql", "postgresql+psycopg")
+engine = create_engine(connection_string, connect_args={"sslmode":"require"}, pool_recycle=300, pool_size=10)
 
-app = FastAPI()
-
-@app.on_event("startup")
-def on_startup():
-    create_db_and_tables()
-
+SQLModel.metadata.create_all(engine)
 
 def get_data():
     with Session(engine) as session:
